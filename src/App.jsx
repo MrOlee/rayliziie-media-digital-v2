@@ -1,219 +1,111 @@
 import React, { useState, useEffect } from 'react';
 
-// ==========================================
-// KONEKSI DATABASE SUPABASE LIVE
-// ==========================================
 const SUPABASE_URL = "https://harpdcqmrqdgckcuhxfr.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ppzSXi7DuN7v0racT9l98A_JxK5-MGG";
-
-const headers = {
-    'apikey': SUPABASE_ANON_KEY,
-    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
-};
+const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
 
 const mediaNetwork = [
-    { name: "NutrisiDietMu", icon: "🌱", cat: "Media Kesehatan & Gizi", desc: "Portal edukasi gizi klinis dan panduan kesehatan masyarakat.", link: "https://nutrisidietmu.vercel.app" },
-    { name: "BolaGass", icon: "⚽", cat: "Media Jurnalisme Olahraga", desc: "Platform jurnalisme sepak bola dengan ulasan taktis mendalam.", link: "#" },
-    { name: "GlowLogika", icon: "✨", cat: "Edukasi Skincare & Beauty", desc: "Media literasi kesehatan kulit berdasarkan sains serta fakta medis.", link: "#" },
-    { name: "CuanPintar", icon: "💰", cat: "Literasi Finansial & Investasi", desc: "Portal perencanaan keuangan harian dan investasi anak muda.", link: "#" },
-    { name: "DakwahBerkah", icon: "🌙", cat: "Media Dakwah & Islami", desc: "Portal edukasi agama, fiqih, dan panduan ibadah harian.", link: "#" }
+    { name: "NutrisiDietMu", icon: "🌱", cat: "Media Kesehatan & Gizi", desc: "Portal edukasi gizi klinis.", link: "https://nutrisidietmu.vercel.app" },
+    { name: "BolaGass", icon: "⚽", cat: "Media Jurnalisme Olahraga", desc: "Platform jurnalisme sepak bola.", link: "#" },
+    { name: "GlowLogika", icon: "✨", cat: "Edukasi Skincare & Beauty", desc: "Media literasi kesehatan kulit.", link: "#" },
+    { name: "CuanPintar", icon: "💰", cat: "Literasi Finansial & Investasi", desc: "Portal perencanaan keuangan.", link: "#" },
+    { name: "DakwahBerkah", icon: "🌙", cat: "Media Dakwah & Islami", desc: "Portal edukasi agama dan ibadah.", link: "#" }
 ];
-
-const businessServices = [
-    { name: "Web Dev & Techno", icon: "💻", cat: "Pengembangan IT", desc: "Layanan pembuatan website korporat dan infrastruktur sistem digital." },
-    { name: "Rayliziie Digital Invitation", icon: "🌐", cat: "Undangan Digital Premium", desc: "Jasa perancangan undangan digital elegan untuk acara formal dan pernikahan." }
-];
-
-const TARIF_PER_ARTIKEL = 15000;
-const TARIF_PER_1000_VIEWS = 900;
 
 const App = () => {
-    const [view, setView] = useState('home');
-    const [portalMode, setPortalMode] = useState('login');
-    const [users, setUsers] = useState([]);
-    const [articles, setArticles] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [currentUser, setCurrentUser] = useState(null);
-    const [editingId, setEditingId] = useState(null);
-    const [editTitle, setEditTitle] = useState('');
-    const [ceoTab, setCeoTab] = useState('approval');
+    const [view, setView] = useState('home');
+    const [portalMode, setPortalMode] = useState('login');
+    const [ceoTab, setCeoTab] = useState('approval');
+    const [users, setUsers] = useState([]);
+    const [articles, setArticles] = useState([]);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [editingId, setEditingId] = useState(null);
+    const [editTitle, setEditTitle] = useState('');
 
-    const [loginEmail, setLoginEmail] = useState('');
-    const [loginPassword, setLoginPassword] = useState('');
-    const [regName, setRegName] = useState('');
-    const [regEmail, setRegEmail] = useState('');
-    const [regPassword, setRegPassword] = useState('');
-    const [forgotEmail, setForgotEmail] = useState('');
-    const [artTitle, setArtTitle] = useState('');
-    const [artCategory, setArtCategory] = useState('gizi');
-    const [artContent, setArtContent] = useState('');
-    const [artImageUrl, setArtImageUrl] = useState('');
+    const fetchSupabaseData = async () => {
+        try {
+            const resU = await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_users?select=*`, { headers });
+            const resA = await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?select=*`, { headers });
+            if (resU.ok) setUsers(await resU.json());
+            if (resA.ok) setArticles(await resA.json());
+        } catch (err) { console.error(err); }
+    };
 
-    const fetchSupabaseData = async () => {
-        if (!SUPABASE_URL || SUPABASE_URL.includes("XYZ_GANTI")) return;
-        try {
-            const resUsers = await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_users?select=*`, { headers });
-            if (resUsers.ok) setUsers(await resUsers.json());
-            const resArticles = await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?select=*`, { headers });
-            if (resArticles.ok) setArticles(await resArticles.json());
-        } catch (err) { console.error("Koneksi Supabase terputus:", err); }
-    };
+    useEffect(() => { fetchSupabaseData(); }, []);
 
-    useEffect(() => {
-        fetchSupabaseData();
-        const interval = setInterval(fetchSupabaseData, 3000);
-        return () => clearInterval(interval);
-    }, []);
+    const deleteArticle = async (id) => {
+        if (!confirm("Hapus artikel ini permanen?")) return;
+        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?id=eq.${id}`, { method: 'DELETE', headers });
+        fetchSupabaseData();
+    };
 
-    // FUNGSI CRUD
-    const deleteArticle = async (id) => {
-        if (!confirm("Hapus artikel ini permanen?")) return;
-        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?id=eq.${id}`, { method: 'DELETE', headers });
-        fetchSupabaseData();
-    };
+    const updateArticle = async (id) => {
+        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?id=eq.${id}`, {
+            method: 'PATCH', headers, body: JSON.stringify({ title: editTitle })
+        });
+        setEditingId(null);
+        fetchSupabaseData();
+    };
 
-    const updateArticle = async (id) => {
-        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?id=eq.${id}`, {
-            method: 'PATCH', headers, body: JSON.stringify({ title: editTitle })
-        });
-        setEditingId(null);
-        fetchSupabaseData();
-    };
+    const approveArticle = async (id) => {
+        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?id=eq.${id}`, {
+            method: 'PATCH', headers, body: JSON.stringify({ status: 'Published' })
+        });
+        fetchSupabaseData();
+    };
 
-    const approveArticle = async (id) => {
-        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?id=eq.${id}`, {
-            method: 'PATCH', headers, body: JSON.stringify({ status: 'Published' })
-        });
-        fetchSupabaseData();
-    };
+    if (view === 'admin-dashboard') {
+        return (
+            <div style={{ minHeight: '100vh', backgroundColor: '#0f172a', color: '#fff', padding: '24px', fontFamily: 'sans-serif' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <h1>⚙️ CENTRAL CONTROL SERVER</h1>
+                        <button onClick={() => setView('home')} style={{ backgroundColor: '#7f1d1d', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '20px', cursor: 'pointer' }}>Keluar</button>
+                    </div>
 
-    const rejectArticle = async (id) => {
-        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles?id=eq.${id}`, { method: 'DELETE', headers });
-        fetchSupabaseData();
-    };
+                    <div style={{ marginBottom: '20px' }}>
+                        <button onClick={() => setCeoTab('approval')} style={{ padding: '10px 20px', background: ceoTab === 'approval' ? '#4f46e5' : '#1e293b', border: 'none', color: '#fff', cursor: 'pointer', marginRight: '10px' }}>Kurasi Artikel</button>
+                        <button onClick={() => setCeoTab('published')} style={{ padding: '10px 20px', background: ceoTab === 'published' ? '#059669' : '#1e293b', border: 'none', color: '#fff', cursor: 'pointer' }}>Lihat Semua Published</button>
+                    </div>
 
-    const approveUser = async (id) => {
-        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_users?id=eq.${id}`, {
-            method: 'PATCH', headers, body: JSON.stringify({ approved: true })
-        });
-        fetchSupabaseData();
-    };
+                    {ceoTab === 'approval' && (
+                        <div style={{ display: 'flex', gap: '20px' }}>
+                            <div style={{ flex: '2', backgroundColor: '#1e293b', padding: '20px', borderRadius: '16px' }}>
+                                <h2>📝 SENSOR ARTIKEL (Pending)</h2>
+                                {articles.filter(a => a.status === 'Pending Review').map(a => (
+                                    <div key={a.id} style={{ padding: '10px', borderBottom: '1px solid #334155' }}>
+                                        <p>{a.title}</p>
+                                        <button onClick={() => approveArticle(a.id)}>Terbitkan</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-    const handleRegister = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_users`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ name: regName, email: regEmail, password: regPassword, approved: false })
-            });
-            alert('Registrasi Berhasil!');
-            setPortalMode('login');
-            fetchSupabaseData();
-        } catch (err) { alert('Gagal.'); } finally { setLoading(false); }
-    };
+                    {ceoTab === 'published' && (
+                        <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px' }}>
+                            <h2>Daftar Artikel Terbit</h2>
+                            {articles.filter(a => a.status === 'Published').map(a => (
+                                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #334155' }}>
+                                    {editingId === a.id ? (
+                                        <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} style={{ color: '#000' }} />
+                                    ) : (
+                                        <span>{a.title}</span>
+                                    )}
+                                    <div>
+                                        {editingId === a.id ? <button onClick={() => updateArticle(a.id)}>Simpan</button> : <button onClick={() => { setEditingId(a.id); setEditTitle(a.title); }}>Edit</button>}
+                                        <button onClick={() => deleteArticle(a.id)} style={{ color: 'red', marginLeft: '10px' }}>Hapus</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
-    const handleLogin = (e) => {
-        e.preventDefault();
-        if (loginEmail === 'admin' && loginPassword === 'ceozie') {
-            setView('admin-dashboard');
-        } else {
-            const user = users.find(u => u.email.toLowerCase() === loginEmail.toLowerCase());
-            if (user && user.password === loginPassword && user.approved) {
-                setCurrentUser(user);
-            } else {
-                alert('Gagal login/Akun belum di-approve.');
-            }
-        }
-    };
-
-    const handleCreateArticle = async (e) => {
-        e.preventDefault();
-        await fetch(`${SUPABASE_URL}/rest/v1/rayliziie_articles`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ title: artTitle, category: artCategory, content: artContent, image_url: artImageUrl, author: currentUser.name, status: 'Pending Review' })
-        });
-        alert('Artikel dikirim!');
-        fetchSupabaseData();
-    };
-
-    // ==========================================
-    // VIEW: ADMIN DASHBOARD
-    // ==========================================
-    if (view === 'admin-dashboard') {
-        return (
-            <div style={{ minHeight: '100vh', backgroundColor: '#0f172a', color: '#fff', padding: '24px', fontFamily: 'sans-serif' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                        <h1>⚙️ CENTRAL CONTROL SERVER</h1>
-                        <button onClick={() => setView('home')} style={{ backgroundColor: '#7f1d1d', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '20px', cursor: 'pointer' }}>Keluar</button>
-                    </div>
-
-                    <div style={{ marginBottom: '20px' }}>
-                        <button onClick={() => setCeoTab('approval')} style={{ padding: '10px 20px', background: ceoTab === 'approval' ? '#4f46e5' : '#1e293b', border: 'none', color: '#fff', cursor: 'pointer', marginRight: '10px' }}>Kurasi Artikel</button>
-                        <button onClick={() => setCeoTab('published')} style={{ padding: '10px 20px', background: ceoTab === 'published' ? '#059669' : '#1e293b', border: 'none', color: '#fff', cursor: 'pointer' }}>Lihat Semua Published</button>
-                    </div>
-
-                    {ceoTab === 'approval' && (
-                        <div style={{ display: 'flex', gap: '20px' }}>
-                            {/* Kolom Verifikasi User */}
-                            <div style={{ flex: '1', backgroundColor: '#1e293b', padding: '20px', borderRadius: '16px' }}>
-                                <h2>👥 VERIFIKASI AKUN</h2>
-                                {users.filter(u => !u.approved).map(u => (
-                                    <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #334155' }}>
-                                        <span>{u.name}</span>
-                                        <button onClick={() => approveUser(u.id)}>Approve</button>
-                                    </div>
-                                ))}
-                            </div>
-                            {/* Kolom Sensor Artikel */}
-                            <div style={{ flex: '2', backgroundColor: '#1e293b', padding: '20px', borderRadius: '16px' }}>
-                                <h2>📝 SENSOR ARTIKEL</h2>
-                                {articles.filter(a => a.status === 'Pending Review').map(a => (
-                                    <div key={a.id} style={{ padding: '10px', borderBottom: '1px solid #334155' }}>
-                                        <p>{a.title}</p>
-                                        <button onClick={() => approveArticle(a.id)}>Terbitkan</button>
-                                        <button onClick={() => rejectArticle(a.id)}>Tolak</button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {ceoTab === 'published' && (
-                        <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px' }}>
-                            <h2>Daftar Artikel Terbit</h2>
-                            {articles.filter(a => a.status === 'Published').map(a => (
-                                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #334155' }}>
-                                    {editingId === a.id ? (
-                                        <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} style={{ color: '#000' }} />
-                                    ) : (
-                                        <span>{a.title}</span>
-                                    )}
-                                    <div>
-                                        {editingId === a.id ? (
-                                            <button onClick={() => updateArticle(a.id)}>Simpan</button>
-                                        ) : (
-                                            <button onClick={() => { setEditingId(a.id); setEditTitle(a.title); }}>Edit</button>
-                                        )}
-                                        <button onClick={() => deleteArticle(a.id)} style={{ color: 'red' }}>Hapus</button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
-    // ==========================================
-    // TAMPILAN DEPAN UTAMA PUBLIC WEBSITE
-    // ==========================================
-    return (
+return (
         <div style={{ minHeight: '100vh', backgroundColor: '#0f172a', color: '#f8fafc', fontFamily: 'sans-serif', margin: 0, padding: 0 }}>
             <header style={{ borderBottom: '1px solid #1e293b', backgroundColor: '#0f172a', position: 'sticky', top: 0, zIndex: 50 }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -285,4 +177,5 @@ const App = () => {
     );
 };
 
+export d
 export default App;
